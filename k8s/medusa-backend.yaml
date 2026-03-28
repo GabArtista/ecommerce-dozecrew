@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medusa-backend
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: medusa-backend
+  template:
+    metadata:
+      labels:
+        app: medusa-backend
+    spec:
+      initContainers:
+        - name: wait-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres 5432; do
+                echo "waiting for postgres..."; sleep 3;
+              done
+      containers:
+        - name: medusa-backend
+          image: ecommerce/medusa-backend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 9000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "9000"
+            - name: DATABASE_URL
+              value: postgres://medusa:$(POSTGRES_PASSWORD)@postgres:5432/medusa_ecommerce
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: POSTGRES_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: JWT_SECRET
+            - name: COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: COOKIE_SECRET
+            - name: STORE_CORS
+              value: "https://shop.dozecrew.com,http://localhost:3000"
+            - name: ADMIN_CORS
+              value: "https://shop.dozecrew.com,https://shop-back.dozecrew.com,http://localhost:9000"
+            - name: AUTH_CORS
+              value: "https://shop.dozecrew.com,https://shop-back.dozecrew.com,http://localhost:3000"
+            - name: ASAAS_API_KEY
+              value: ""
+            - name: ASAAS_SANDBOX
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 10
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: medusa-backend
+  namespace: ecommerce
+spec:
+  selector:
+    app: medusa-backend
+  ports:
+    - port: 80
+      targetPort: 9000

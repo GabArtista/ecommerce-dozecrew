@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-frontend
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-frontend
+  template:
+    metadata:
+      labels:
+        app: shop-frontend
+    spec:
+      containers:
+        - name: shop-frontend
+          image: ecommerce/shop-frontend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: SITE_NAME
+              value: "Minha Loja"
+            - name: MEDUSA_BACKEND_URL
+              value: "http://medusa-backend"
+            - name: MEDUSA_PUBLISHABLE_KEY
+              value: ""
+            - name: NEXT_PUBLIC_MEDUSA_BACKEND_URL
+              value: "https://shop-back.dozecrew.com"
+            - name: MEDUSA_REVALIDATION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-frontend
+  namespace: ecommerce
+spec:
+  selector:
+    app: shop-frontend
+  ports:
+    - port: 80
+      targetPort: 3000
