@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const BACKEND = "http://localhost:9000";
+const BACKEND = process.env.BACKEND_URL || "http://localhost:9000";
 
 test.describe("Backend (Medusa) Health", () => {
   test("store products endpoint responds", async ({ request }) => {
