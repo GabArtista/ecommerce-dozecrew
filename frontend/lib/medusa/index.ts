@@ -304,8 +304,15 @@ export async function getCollectionProducts({
   const sort = sortKey === "PRICE" ? "variants.prices.amount" : "created_at";
 
   try {
+    // Medusa v2 uses category_id[], not category_handle[] — resolve handle to ID first
+    const catData = await medusaFetch<{
+      product_categories: { id: string; handle: string }[];
+    }>(`/store/product-categories?handle=${encodeURIComponent(collection)}&limit=1`);
+    const cat = catData.product_categories?.[0];
+    if (!cat) return [];
+
     const data = await medusaFetch<{ products: MedusaProduct[] }>(
-      `/store/products?category_handle[]=${encodeURIComponent(collection)}&order=${sort}&fields=*variants,*images,*options,*tags`,
+      `/store/products?category_id[]=${cat.id}&order=${sort}&fields=*variants,*images,*options,*tags`,
     );
     return (data.products || []).map(mapProduct);
   } catch {
