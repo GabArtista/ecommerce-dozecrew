@@ -61,8 +61,8 @@ class AsaasPaymentService extends AbstractPaymentProvider<AsaasOptions> {
     return amount / 100;
   }
 
-  private toBillingType(context: Record<string, unknown>): "PIX" | "BOLETO" | "CREDIT_CARD" {
-    const billing = context?.billing_type as string;
+  private toBillingType(context: Record<string, unknown> | undefined): "PIX" | "BOLETO" | "CREDIT_CARD" {
+    const billing = (context?.billing_type as string) ?? "";
     if (billing === "BOLETO") return "BOLETO";
     if (billing === "CREDIT_CARD") return "CREDIT_CARD";
     return "PIX"; // default
@@ -95,8 +95,9 @@ class AsaasPaymentService extends AbstractPaymentProvider<AsaasOptions> {
 
   async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentOutput> {
     const { amount, currency_code, context } = input;
-    const customer = (context?.customer as Record<string, unknown>) ?? {};
-    const billingType = this.toBillingType(context ?? {});
+    const ctx = context as Record<string, unknown> ?? {};
+    const customer = (ctx?.customer as Record<string, unknown>) ?? {};
+    const billingType = this.toBillingType(ctx);
 
     try {
       // 1. Create or find Asaas customer
@@ -121,14 +122,14 @@ class AsaasPaymentService extends AbstractPaymentProvider<AsaasOptions> {
         billingType,
         value: this.toCentavos(Number(amount)),
         dueDate: new Date(this.dueDateTomorrow()),
-        description: `Pedido - ${context?.cart_id ?? "ecommerce"}`,
-        externalReference: context?.cart_id as string,
+        description: `Pedido - ${ctx?.cart_id ?? "ecommerce"}`,
+        externalReference: ctx?.cart_id as string,
       };
 
       // Credit card extras
-      if (billingType === "CREDIT_CARD" && context?.credit_card) {
-        const cc = context.credit_card as Record<string, string>;
-        const customerAddr = (context?.billing_address as Record<string, string>) ?? {};
+      if (billingType === "CREDIT_CARD" && ctx?.credit_card) {
+        const cc = ctx.credit_card as Record<string, string>;
+        const customerAddr = (ctx?.billing_address as Record<string, string>) ?? {};
         paymentPayload.creditCard = {
           holderName: cc.holder_name,
           number: cc.number,
@@ -173,8 +174,8 @@ class AsaasPaymentService extends AbstractPaymentProvider<AsaasOptions> {
         try {
           const boleto = await this.client.payments.getIdentificationField(payment.id);
           boletoData = {
-            boletoUrl: boleto.bankSlipUrl || "",
-            boletoBarCode: boleto.identificationField || "",
+            boletoBarCode: boleto.identificationField || boleto.barCode || "",
+            boletoNossoNumero: boleto.nossoNumero || "",
           };
         } catch {
           // boleto may not be ready immediately

@@ -44,11 +44,11 @@ spec:
             failureThreshold: 6
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "100m"
+              memory: "128Mi"
+              cpu: "10m"
             limits:
               memory: "512Mi"
-              cpu: "300m"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service

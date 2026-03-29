@@ -39,8 +39,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
     // Create a payment collection for the cart
     const paymentCollection = await paymentService.createPaymentCollections({
-      region_id: "region_default",
-      amount: 0, // will be overridden by cart total
+      amount: 0,
       currency_code: "brl",
     });
 
@@ -53,12 +52,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         currency_code: "brl",
         data: {},
         context: {
-          cart_id: body.cart_id,
-          billing_type: body.billing_type,
-          customer: body.customer,
-          credit_card: body.credit_card,
-          billing_address: body.billing_address,
-        },
+          customer: { id: "guest", ...body.customer } as any,
+        } as any,
       }
     );
 

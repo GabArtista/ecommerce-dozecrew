@@ -17,7 +17,7 @@ ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://shop-back.dozecrew.com
 ENV MEDUSA_PUBLISHABLE_KEY=""
 ENV MEDUSA_REVALIDATION_SECRET=ecommerce_jwt_secret_2026
 
-RUN npm run build
+RUN npm run build && mkdir -p /app/public
 
 FROM node:20-alpine AS runner
 WORKDIR /app

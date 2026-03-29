@@ -15,7 +15,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   try {
-    await paymentService.processEvent({
+    await paymentService.getWebhookActionAndData({
       provider: "pp_asaas_asaas",
       payload: {
         data: body,

@@ -19,7 +19,7 @@ ENV NODE_ENV=production
 ENV ASAAS_API_KEY=dummy_for_build
 
 # Build Medusa
-RUN npm run build || true
+RUN npm run build
 
 EXPOSE 9000
 
