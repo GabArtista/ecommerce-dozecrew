@@ -198,7 +198,7 @@ export async function addToCart(
     cart = data.cart;
   }
 
-  revalidateTag(TAGS.cart);
+  revalidateTag(TAGS.cart, "seconds");
   return mapCart(cart!);
 }
 
@@ -215,7 +215,7 @@ export async function removeFromCart(lineIds: string[]): Promise<Cart> {
     cart = data.cart;
   }
 
-  revalidateTag(TAGS.cart);
+  revalidateTag(TAGS.cart, "seconds");
   return mapCart(cart!);
 }
 
@@ -237,7 +237,7 @@ export async function updateCart(
     cart = data.cart;
   }
 
-  revalidateTag(TAGS.cart);
+  revalidateTag(TAGS.cart, "seconds");
   return mapCart(cart!);
 }
 
@@ -474,9 +474,9 @@ export async function revalidate(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ status: 401, message: "Unauthorized" });
   }
 
-  revalidateTag(TAGS.collections);
-  revalidateTag(TAGS.products);
-  revalidateTag(TAGS.cart);
+  revalidateTag(TAGS.collections, "seconds");
+  revalidateTag(TAGS.products, "seconds");
+  revalidateTag(TAGS.cart, "seconds");
 
   return NextResponse.json({ status: 200, revalidated: true });
 }
