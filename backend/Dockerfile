@@ -1,4 +1,5 @@
-FROM node:20-alpine
+# Debian-based image: @swc/core native bindings require glibc (linux-x64-gnu)
+FROM node:20-slim AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -6,7 +7,7 @@ RUN npm install
 
 COPY . .
 
-# Build with development mode so ts-node can load medusa-config.ts
+# Build without NODE_ENV=production so ts-node/swc can transpile medusa-config.ts
 ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/medusa_build
 ENV JWT_SECRET=build_secret
 ENV COOKIE_SECRET=build_secret
@@ -17,9 +18,17 @@ ENV ASAAS_API_KEY=dummy_for_build
 
 RUN npm run build
 
+# Production runner: start from the compiled .medusa/server directory
+FROM node:20-slim AS runner
+WORKDIR /app
+
 ENV NODE_ENV=production
 
-EXPOSE 9000
+# Copy the compiled server output
+COPY --from=builder /app/.medusa/server ./server
+# Copy node_modules so medusa can find its dependencies
+COPY --from=builder /app/node_modules ./server/node_modules
 
-# medusa start reads from .medusa/server/ at runtime
+WORKDIR /app/server
+EXPOSE 9000
 CMD ["npm", "run", "start"]
