@@ -1,7 +1,9 @@
+---
+# Frontend ingress: shop.dozecrew.com
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ecommerce-ingress
+  name: ecommerce-frontend-ingress
   namespace: ecommerce
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -15,8 +17,7 @@ spec:
   tls:
     - hosts:
         - shop.dozecrew.com
-        - shop-back.dozecrew.com
-      secretName: ecommerce-tls
+      secretName: ecommerce-shop-tls
   rules:
     - host: shop.dozecrew.com
       http:
@@ -28,6 +29,26 @@ spec:
                 name: shop-frontend
                 port:
                   number: 80
+---
+# Backend ingress: shop-back.dozecrew.com
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-backend-ingress
+  namespace: ecommerce
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "32m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - shop-back.dozecrew.com
+      secretName: ecommerce-shop-back-tls
+  rules:
     - host: shop-back.dozecrew.com
       http:
         paths:
