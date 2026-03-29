@@ -40,7 +40,7 @@ spec:
                   name: ecommerce-secrets
                   key: POSTGRES_PASSWORD
             - name: DATABASE_URL
-              value: postgres://medusa:$(POSTGRES_PASSWORD)@postgres:5432/medusa_ecommerce
+              value: postgres://medusa:$(POSTGRES_PASSWORD)@postgres:5432/medusa_ecommerce?sslmode=disable
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

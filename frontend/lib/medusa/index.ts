@@ -242,6 +242,7 @@ export async function updateCart(
 }
 
 export async function getCart(): Promise<Cart | undefined> {
+  "use cache: private";
   const cartId = await getCartId();
   if (!cartId) return undefined;
 

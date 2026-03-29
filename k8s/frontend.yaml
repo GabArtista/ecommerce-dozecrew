@@ -27,7 +27,7 @@ spec:
             - name: MEDUSA_BACKEND_URL
               value: "http://medusa-backend"
             - name: MEDUSA_PUBLISHABLE_KEY
-              value: ""
+              value: "pk_f036d677d2a821838bed2d7f16f4a0d8742bb62278cfaa493d9be6e62b9d328e"
             - name: NEXT_PUBLIC_MEDUSA_BACKEND_URL
               value: "https://shop-back.dozecrew.com"
             - name: MEDUSA_REVALIDATION_SECRET
