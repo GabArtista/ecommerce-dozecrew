@@ -152,7 +152,7 @@ function mapCart(c: MedusaCart): Cart {
 
   return {
     id: c.id,
-    checkoutUrl: `${BACKEND_URL}/checkout/${c.id}`,
+    checkoutUrl: `/checkout`,
     cost: {
       subtotalAmount: toMoney(c.subtotal || 0, currency),
       totalAmount: toMoney(c.total || 0, currency),
@@ -170,9 +170,20 @@ async function getCartId(): Promise<string | undefined> {
 }
 
 export async function createCart(): Promise<Cart> {
+  // Buscar região BRL para associar ao carrinho
+  let regionId: string | undefined;
+  try {
+    const regionData = await medusaFetch<{
+      regions: { id: string; currency_code: string }[];
+    }>("/store/regions?currency_code=brl");
+    regionId = regionData.regions?.[0]?.id;
+  } catch {
+    // Fallback: criar carrinho sem region_id
+  }
+
   const data = await medusaFetch<{ cart: MedusaCart }>("/store/carts", {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify(regionId ? { region_id: regionId } : {}),
   });
   return mapCart(data.cart);
 }
@@ -183,40 +194,42 @@ export async function addToCart(
   const cartId = await getCartId();
   if (!cartId) throw new Error("No cart found");
 
-  let cart: MedusaCart | undefined;
-  for (const line of lines) {
-    const data = await medusaFetch<{ cart: MedusaCart }>(
-      `/store/carts/${cartId}/line-items`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          variant_id: line.merchandiseId,
-          quantity: line.quantity,
-        }),
-      },
-    );
-    cart = data.cart;
-  }
+  const results = await Promise.all(
+    lines.map((line) =>
+      medusaFetch<{ cart: MedusaCart }>(
+        `/store/carts/${cartId}/line-items`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            variant_id: line.merchandiseId,
+            quantity: line.quantity,
+          }),
+        },
+      ),
+    ),
+  );
+  const cart = results[results.length - 1]!.cart;
 
-  revalidateTag(TAGS.cart, "seconds");
-  return mapCart(cart!);
+  revalidateTag(TAGS.cart);
+  return mapCart(cart);
 }
 
 export async function removeFromCart(lineIds: string[]): Promise<Cart> {
   const cartId = await getCartId();
   if (!cartId) throw new Error("No cart found");
 
-  let cart: MedusaCart | undefined;
-  for (const lineId of lineIds) {
-    const data = await medusaFetch<{ cart: MedusaCart }>(
-      `/store/carts/${cartId}/line-items/${lineId}`,
-      { method: "DELETE" },
-    );
-    cart = data.cart;
-  }
+  const results = await Promise.all(
+    lineIds.map((lineId) =>
+      medusaFetch<{ cart: MedusaCart }>(
+        `/store/carts/${cartId}/line-items/${lineId}`,
+        { method: "DELETE" },
+      ),
+    ),
+  );
+  const cart = results[results.length - 1]!.cart;
 
-  revalidateTag(TAGS.cart, "seconds");
-  return mapCart(cart!);
+  revalidateTag(TAGS.cart);
+  return mapCart(cart);
 }
 
 export async function updateCart(
@@ -225,20 +238,21 @@ export async function updateCart(
   const cartId = await getCartId();
   if (!cartId) throw new Error("No cart found");
 
-  let cart: MedusaCart | undefined;
-  for (const line of lines) {
-    const data = await medusaFetch<{ cart: MedusaCart }>(
-      `/store/carts/${cartId}/line-items/${line.id}`,
-      {
-        method: "POST",
-        body: JSON.stringify({ quantity: line.quantity }),
-      },
-    );
-    cart = data.cart;
-  }
+  const results = await Promise.all(
+    lines.map((line) =>
+      medusaFetch<{ cart: MedusaCart }>(
+        `/store/carts/${cartId}/line-items/${line.id}`,
+        {
+          method: "POST",
+          body: JSON.stringify({ quantity: line.quantity }),
+        },
+      ),
+    ),
+  );
+  const cart = results[results.length - 1]!.cart;
 
-  revalidateTag(TAGS.cart, "seconds");
-  return mapCart(cart!);
+  revalidateTag(TAGS.cart);
+  return mapCart(cart);
 }
 
 export async function getCart(): Promise<Cart | undefined> {
@@ -349,22 +363,33 @@ export async function getMenu(handle: string): Promise<Menu[]> {
   "use cache";
   cacheLife("hours");
 
-  // Medusa doesn't have a native menu API — use static menus or
-  // fall back to collections for the footer
   if (handle === "next-js-frontend-header-menu") {
-    return [
-      { title: "All", path: "/search" },
-      { title: "Shirts", path: "/search/shirts" },
-      { title: "Stickers", path: "/search/stickers" },
-    ];
+    // Buscar categorias reais do Medusa para compor o menu dinâmico
+    try {
+      const data = await medusaFetch<{
+        product_categories: { id: string; name: string; handle: string }[];
+      }>("/store/product-categories?limit=10");
+
+      const categoryItems: Menu[] = (data.product_categories || []).map(
+        (cat) => ({
+          title: cat.name,
+          path: `/search/${cat.handle}`,
+        }),
+      );
+
+      return [{ title: "Todos", path: "/search" }, ...categoryItems];
+    } catch {
+      // Fallback se a API não estiver disponível
+      return [{ title: "Todos", path: "/search" }];
+    }
   }
 
   if (handle === "next-js-frontend-footer-menu") {
     return [
       { title: "Home", path: "/" },
-      { title: "About", path: "/about" },
-      { title: "Terms", path: "/terms" },
-      { title: "Privacy", path: "/privacy" },
+      { title: "Sobre Nós", path: "/about" },
+      { title: "Termos de Uso", path: "/terms" },
+      { title: "Privacidade", path: "/privacy" },
     ];
   }
 
@@ -373,9 +398,115 @@ export async function getMenu(handle: string): Promise<Menu[]> {
 
 // ---------- Pages ----------
 
+const STATIC_PAGES: Record<
+  string,
+  { title: string; body: string; bodySummary: string }
+> = {
+  about: {
+    title: "Sobre Nós",
+    bodySummary:
+      "Conheça a Doze Crew — moda com propósito, feita para durar.",
+    body: `<h2>Quem somos</h2>
+<p>A Doze Crew nasceu da paixão por criar peças que vão além da moda passageira. Somos uma marca brasileira comprometida com qualidade, autenticidade e sustentabilidade.</p>
+<h2>Nossa missão</h2>
+<p>Acreditamos que roupas de qualidade não precisam custar uma fortuna. Por isso, trabalhamos diretamente com fabricantes nacionais para oferecer peças premium com preço justo.</p>
+<h2>Nossos valores</h2>
+<ul>
+  <li><strong>Qualidade</strong>: Usamos apenas tecidos premium com certificação OEKO-TEX.</li>
+  <li><strong>Transparência</strong>: Você sabe exatamente o que está comprando e de onde vem.</li>
+  <li><strong>Sustentabilidade</strong>: Embalagens 100% recicláveis e compensação de carbono em todos os envios.</li>
+  <li><strong>Comunidade</strong>: Parte dos nossos lucros é reinvestida em projetos culturais brasileiros.</li>
+</ul>
+<h2>Produção nacional</h2>
+<p>Todas as nossas peças são produzidas no Brasil, em parceria com cooperativas têxteis que garantem condições de trabalho dignas e salários justos.</p>
+<h2>Fale conosco</h2>
+<p>Dúvidas, sugestões ou parcerias? Entre em contato pelo e-mail <a href="mailto:oi@dozecrew.com">oi@dozecrew.com</a> ou pelas nossas redes sociais.</p>`,
+  },
+  terms: {
+    title: "Termos de Uso",
+    bodySummary: "Leia os termos e condições de uso da loja Doze Crew.",
+    body: `<p><em>Última atualização: março de 2026</em></p>
+<h2>1. Aceitação dos Termos</h2>
+<p>Ao acessar e utilizar o site da Doze Crew, você concorda com estes Termos de Uso. Caso não concorde, por favor, não utilize nossos serviços.</p>
+<h2>2. Produtos e Preços</h2>
+<p>Todos os preços são expressos em Reais (BRL) e incluem os impostos aplicáveis. Reservamo-nos o direito de alterar preços sem aviso prévio, sendo aplicado o preço vigente no momento da conclusão do pedido.</p>
+<h2>3. Pedidos e Pagamentos</h2>
+<p>Aceitamos pagamentos via PIX, boleto bancário e cartão de crédito. O pedido é confirmado somente após a aprovação do pagamento. Em caso de indisponibilidade de estoque, notificaremos o cliente e procederemos com o reembolso integral.</p>
+<h2>4. Entrega</h2>
+<p>As entregas são realizadas para todo o território nacional. Os prazos variam conforme a modalidade de frete escolhida e a localidade do destinatário. O prazo começa a contar após a confirmação do pagamento.</p>
+<h2>5. Política de Trocas e Devoluções</h2>
+<p>Você tem até 30 dias corridos a partir do recebimento do produto para solicitar troca ou devolução, conforme o Código de Defesa do Consumidor (Lei 8.078/90). Produtos com defeito de fabricação têm garantia de 90 dias.</p>
+<h2>6. Propriedade Intelectual</h2>
+<p>Todo o conteúdo deste site — textos, imagens, logotipos e designs — é propriedade da Doze Crew e protegido por lei. É proibida a reprodução sem autorização prévia.</p>
+<h2>7. Limitação de Responsabilidade</h2>
+<p>A Doze Crew não se responsabiliza por danos indiretos decorrentes do uso do site ou dos produtos além do previsto em lei.</p>
+<h2>8. Legislação Aplicável</h2>
+<p>Estes termos são regidos pela legislação brasileira. Fica eleito o foro da comarca de São Paulo/SP para resolução de quaisquer litígios.</p>
+<h2>9. Contato</h2>
+<p>Para questões relacionadas a estes Termos de Uso, entre em contato pelo e-mail <a href="mailto:juridico@dozecrew.com">juridico@dozecrew.com</a>.</p>`,
+  },
+  privacy: {
+    title: "Política de Privacidade",
+    bodySummary:
+      "Como coletamos, usamos e protegemos seus dados pessoais conforme a LGPD.",
+    body: `<p><em>Última atualização: março de 2026</em></p>
+<h2>1. Introdução</h2>
+<p>A Doze Crew se compromete a proteger sua privacidade. Esta Política descreve como coletamos, usamos e protegemos seus dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018).</p>
+<h2>2. Dados Coletados</h2>
+<p>Coletamos os seguintes dados pessoais:</p>
+<ul>
+  <li><strong>Dados de identificação</strong>: nome completo, e-mail, telefone.</li>
+  <li><strong>Dados de entrega</strong>: endereço completo (CEP, logradouro, número, complemento, bairro, cidade, estado).</li>
+  <li><strong>Dados de pagamento</strong>: processados de forma segura pelo gateway Asaas — não armazenamos dados de cartão.</li>
+  <li><strong>Dados de navegação</strong>: cookies técnicos e de desempenho para funcionamento do site.</li>
+</ul>
+<h2>3. Finalidade do Tratamento</h2>
+<p>Utilizamos seus dados para:</p>
+<ul>
+  <li>Processar e entregar seus pedidos;</li>
+  <li>Enviar comunicações transacionais (confirmação de pedido, nota fiscal, rastreamento);</li>
+  <li>Melhorar nossa plataforma e experiência de compra;</li>
+  <li>Cumprir obrigações legais e fiscais.</li>
+</ul>
+<h2>4. Base Legal</h2>
+<p>O tratamento de dados é realizado com base na execução de contrato (Art. 7°, V da LGPD) e no legítimo interesse para comunicações transacionais.</p>
+<h2>5. Compartilhamento de Dados</h2>
+<p>Compartilhamos seus dados apenas com parceiros essenciais para a prestação dos serviços: transportadoras, gateway de pagamento (Asaas) e serviços de infraestrutura em nuvem. Não vendemos seus dados a terceiros.</p>
+<h2>6. Armazenamento e Segurança</h2>
+<p>Seus dados são armazenados em servidores seguros com criptografia em repouso e em trânsito (TLS 1.3). Aplicamos controles de acesso rigorosos e realizamos auditorias periódicas.</p>
+<h2>7. Seus Direitos</h2>
+<p>Conforme a LGPD, você tem direito a:</p>
+<ul>
+  <li>Confirmar a existência de tratamento e acessar seus dados;</li>
+  <li>Corrigir dados incompletos ou desatualizados;</li>
+  <li>Solicitar a exclusão de dados desnecessários;</li>
+  <li>Revogar o consentimento a qualquer momento;</li>
+  <li>Solicitar portabilidade dos dados.</li>
+</ul>
+<h2>8. Cookies</h2>
+<p>Utilizamos cookies estritamente necessários para o funcionamento do carrinho e sessão. Não utilizamos cookies de rastreamento de terceiros para publicidade.</p>
+<h2>9. Contato com o Encarregado (DPO)</h2>
+<p>Para exercer seus direitos ou esclarecer dúvidas sobre privacidade, entre em contato pelo e-mail <a href="mailto:privacidade@dozecrew.com">privacidade@dozecrew.com</a>.</p>`,
+  },
+};
+
 export async function getPage(handle: string): Promise<Page> {
   "use cache";
   cacheLife("hours");
+
+  const staticPage = STATIC_PAGES[handle];
+  if (staticPage) {
+    return {
+      id: handle,
+      title: staticPage.title,
+      handle,
+      body: staticPage.body,
+      bodySummary: staticPage.bodySummary,
+      seo: { title: staticPage.title, description: staticPage.bodySummary },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
 
   // Medusa v2 doesn't expose a pages/CMS API out of the box.
   // Return an empty page so the app doesn't break.
@@ -482,9 +613,9 @@ export async function revalidate(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ status: 401, message: "Unauthorized" });
   }
 
-  revalidateTag(TAGS.collections, "seconds");
-  revalidateTag(TAGS.products, "seconds");
-  revalidateTag(TAGS.cart, "seconds");
+  revalidateTag(TAGS.collections);
+  revalidateTag(TAGS.products);
+  revalidateTag(TAGS.cart);
 
   return NextResponse.json({ status: 200, revalidated: true });
 }
