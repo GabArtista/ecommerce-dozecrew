@@ -1,4 +1,8 @@
 import clsx from "clsx";
+import {
+  getImageBackdropStyle,
+  shouldBypassImageOptimization,
+} from "lib/image";
 import Image from "next/image";
 import Label from "../label";
 
@@ -29,13 +33,30 @@ export function GridTileImage({
       )}
     >
       {props.src ? (
-        <Image
-          className={clsx("relative h-full w-full object-contain", {
-            "transition duration-300 ease-in-out group-hover:scale-105":
-              isInteractive,
-          })}
-          {...props}
-        />
+        <>
+          <div aria-hidden="true" className="absolute inset-0">
+            <div
+              className="absolute inset-[-16%] scale-125 bg-cover bg-center opacity-95 blur-3xl saturate-[1.8] brightness-95"
+              style={
+                typeof props.src === "string"
+                  ? getImageBackdropStyle(props.src)
+                  : undefined
+              }
+            />
+            <div className="absolute inset-0 bg-white/18 backdrop-blur-lg dark:bg-black/18" />
+          </div>
+          <Image
+            className={clsx("relative z-10 h-full w-full object-contain", {
+              "transition duration-300 ease-in-out group-hover:scale-105":
+                isInteractive,
+            })}
+            unoptimized={
+              typeof props.src === "string" &&
+              shouldBypassImageOptimization(props.src)
+            }
+            {...props}
+          />
+        </>
       ) : null}
       {label ? (
         <Label
