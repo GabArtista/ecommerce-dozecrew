@@ -2,6 +2,10 @@
 
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
 import { GridTileImage } from "components/grid/tile";
+import {
+  getImageBackdropStyle,
+  shouldBypassImageOptimization,
+} from "lib/image";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -33,14 +37,24 @@ export function Gallery({
     <form>
       <div className="relative aspect-square h-full max-h-[550px] w-full overflow-hidden">
         {images[imageIndex] && (
-          <Image
-            className="h-full w-full object-contain"
-            fill
-            sizes="(min-width: 1024px) 66vw, 100vw"
-            alt={images[imageIndex]?.altText as string}
-            src={images[imageIndex]?.src as string}
-            priority={true}
-          />
+          <>
+            <div aria-hidden="true" className="absolute inset-0">
+              <div
+                className="absolute inset-[-16%] scale-125 bg-cover bg-center opacity-95 blur-3xl saturate-[1.8] brightness-95"
+                style={getImageBackdropStyle(images[imageIndex]?.src)}
+              />
+              <div className="absolute inset-0 bg-white/18 backdrop-blur-lg dark:bg-black/18" />
+            </div>
+            <Image
+              className="relative z-10 h-full w-full object-contain"
+              fill
+              sizes="(min-width: 1024px) 66vw, 100vw"
+              alt={images[imageIndex]?.altText as string}
+              src={images[imageIndex]?.src as string}
+              unoptimized={shouldBypassImageOptimization(images[imageIndex]?.src)}
+              priority={true}
+            />
+          </>
         )}
 
         {images.length > 1 ? (
