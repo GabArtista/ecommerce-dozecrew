@@ -22,11 +22,14 @@
     "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@medusajs/admin-sdk": "2.13.1",
     "@medusajs/cli": "2.13.1",
     "@medusajs/framework": "2.13.1",
     "@medusajs/medusa": "2.13.1",
-    "asaas": "^1.1.0"
+    "asaas": "^1.1.0",
+    "ioredis": "^5.10.1",
+    "resend": "^6.10.0"
   },
   "devDependencies": {
     "@medusajs/test-utils": "2.13.1",

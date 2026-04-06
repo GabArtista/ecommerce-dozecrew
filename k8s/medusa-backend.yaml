@@ -51,6 +51,11 @@ spec:
                 secretKeyRef:
                   name: ecommerce-secrets
                   key: COOKIE_SECRET
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: REDIS_URL
             - name: STORE_CORS
               value: "https://shop.dozecrew.com,http://localhost:3000"
             - name: ADMIN_CORS
@@ -58,9 +63,36 @@ spec:
             - name: AUTH_CORS
               value: "https://shop.dozecrew.com,https://shop-back.dozecrew.com,http://localhost:3000"
             - name: ASAAS_API_KEY
-              value: ""
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: ASAAS_API_KEY
             - name: ASAAS_SANDBOX
-              value: "true"
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: ASAAS_SANDBOX
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: RESEND_API_KEY
+            - name: RESEND_FROM_EMAIL
+              value: "noreply@sualoja.com.br"
+            - name: MARKETPLACE_TOKEN_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: JWT_SECRET
+            - name: ML_CLIENT_ID
+              value: "1465478461480690"
+            - name: ML_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: ML_CLIENT_SECRET
+            - name: ML_REDIRECT_URI
+              value: "https://shop-back.dozecrew.com/store/marketplace/oauth/callback/mercadolivre"
           readinessProbe:
             httpGet:
               path: /health

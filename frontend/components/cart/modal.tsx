@@ -6,6 +6,7 @@ import { ShoppingCartIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import LoadingDots from "components/loading-dots";
 import Price from "components/price";
 import { DEFAULT_OPTION } from "lib/constants";
+import { shouldBypassImageOptimization } from "lib/image";
 import { createUrl } from "lib/utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -142,6 +143,9 @@ export default function CartModal() {
                                     src={
                                       item.merchandise.product.featuredImage.url
                                     }
+                                    unoptimized={shouldBypassImageOptimization(
+                                      item.merchandise.product.featuredImage.url,
+                                    )}
                                   />
                                 </div>
                                 <Link

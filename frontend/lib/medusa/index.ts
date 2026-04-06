@@ -26,6 +26,8 @@ const BACKEND_URL =
 const PUBLISHABLE_KEY =
   process.env.MEDUSA_PUBLISHABLE_KEY || "";
 
+const PRODUCT_FIELDS = "*variants,*variants.prices,*images,*options,*tags";
+
 async function medusaFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -66,7 +68,7 @@ function toImage(url: string, alt = ""): Image {
 function mapProduct(p: MedusaProduct): Product {
   const currency =
     p.variants?.[0]?.prices?.[0]?.currency_code || "brl";
-  const prices = p.variants?.flatMap((v) => v.prices) || [];
+  const prices = p.variants?.flatMap((v) => v.prices || []) || [];
   const amounts = prices.map((pr) => pr.amount);
   const minAmount = amounts.length ? Math.min(...amounts) : 0;
   const maxAmount = amounts.length ? Math.max(...amounts) : 0;
@@ -101,11 +103,13 @@ function mapProduct(p: MedusaProduct): Product {
         : toMoney(0, currency),
     };
   });
+  const productHasSellableVariant =
+    variants.length > 0 && variants.some((variant) => variant.availableForSale);
 
   return {
     id: p.id,
     handle: p.handle,
-    availableForSale: p.status === "published",
+    availableForSale: productHasSellableVariant,
     title: p.title,
     description: p.description || "",
     descriptionHtml: p.description || "",
@@ -318,15 +322,16 @@ export async function getCollectionProducts({
   const sort = sortKey === "PRICE" ? "variants.prices.amount" : "created_at";
 
   try {
-    // Medusa v2 uses category_id[], not category_handle[] — resolve handle to ID first
-    const catData = await medusaFetch<{
-      product_categories: { id: string; handle: string }[];
-    }>(`/store/product-categories?handle=${encodeURIComponent(collection)}&limit=1`);
-    const cat = catData.product_categories?.[0];
-    if (!cat) return [];
+    // homepage hidden collections (hidden-homepage-*) are Medusa Collections,
+    // not product categories — resolve via /store/collections
+    const colData = await medusaFetch<{
+      collections: { id: string; handle: string }[];
+    }>(`/store/collections?handle=${encodeURIComponent(collection)}&limit=1`);
+    const col = colData.collections?.[0];
+    if (!col) return [];
 
     const data = await medusaFetch<{ products: MedusaProduct[] }>(
-      `/store/products?category_id[]=${cat.id}&order=${sort}&fields=*variants,*images,*options,*tags`,
+      `/store/products?collection_id[]=${col.id}&order=${sort}&fields=${encodeURIComponent(PRODUCT_FIELDS)}`,
     );
     return (data.products || []).map(mapProduct);
   } catch {
@@ -540,7 +545,7 @@ export async function getProduct(
 
   try {
     const data = await medusaFetch<{ products: MedusaProduct[] }>(
-      `/store/products?handle=${encodeURIComponent(handle)}&fields=*variants,*images,*options,*tags`,
+      `/store/products?handle=${encodeURIComponent(handle)}&fields=${encodeURIComponent(PRODUCT_FIELDS)}`,
     );
     const p = data.products?.[0];
     if (!p) return undefined;
@@ -559,7 +564,7 @@ export async function getProductRecommendations(
 
   try {
     const data = await medusaFetch<{ products: MedusaProduct[] }>(
-      `/store/products?limit=4&fields=*variants,*images,*options,*tags`,
+      `/store/products?limit=4&fields=${encodeURIComponent(PRODUCT_FIELDS)}`,
     );
     return (data.products || [])
       .filter((p) => p.id !== productId)
@@ -585,7 +590,7 @@ export async function getProducts({
 
   const params = new URLSearchParams({
     limit: "50",
-    fields: "*variants,*images,*options,*tags",
+    fields: PRODUCT_FIELDS,
   });
 
   if (query) params.set("q", query);

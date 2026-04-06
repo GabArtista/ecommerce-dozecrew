@@ -5,9 +5,18 @@ import { TikTokProvider } from './providers/tiktok'
 import { FacebookProvider } from './providers/facebook'
 import type { MarketplaceConnection, MarketplacePlatform } from './types'
 import { randomUUID } from 'crypto'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { join } from 'path'
 
-const DB_FILE = '/tmp/marketplace-connections.json'
+const DATA_DIR = process.env.MARKETPLACE_DATA_DIR || join(process.cwd(), '.medusa', 'data')
+const DB_FILE = join(DATA_DIR, 'marketplace-connections.json')
+
+// Ensure the data directory exists on startup
+try {
+  mkdirSync(DATA_DIR, { recursive: true })
+} catch {
+  // ignore if already exists
+}
 
 // ---------------------------------------------------------------------------
 // CSRF state store — Redis-backed when REDIS_URL is set, otherwise in-memory.

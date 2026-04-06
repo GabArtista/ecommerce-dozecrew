@@ -15,14 +15,20 @@ test.describe("Homepage", () => {
 
   test("navbar header is visible", async ({ page }) => {
     await page.goto("/");
-    // Use the first nav (header) specifically
     const headerNav = page.locator("header nav, nav").first();
     await expect(headerNav).toBeVisible();
   });
 
-  test("search page loads", async ({ page }) => {
+  test("shows storefront products on home", async ({ page }) => {
+    await page.goto("/");
+    const productLinks = page.locator('a[href^="/product/"]');
+    await expect(productLinks.first()).toBeVisible();
+    expect(await productLinks.count()).toBeGreaterThan(0);
+  });
+
+  test("search page shows product results", async ({ page }) => {
     await page.goto("/search");
-    expect((await page.goto("/search"))?.status()).toBeLessThan(500);
-    await expect(page.locator("body")).toBeVisible();
+    const productLinks = page.locator('a[href^="/product/"]');
+    await expect(productLinks.first()).toBeVisible();
   });
 });

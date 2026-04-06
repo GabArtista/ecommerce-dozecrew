@@ -63,7 +63,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
   const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
   const storeModuleService = container.resolve(Modules.STORE);
 
-  const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
+  const countries = ["br"];
 
   logger.info("Seeding store data...");
   const [store] = await storeModuleService.listStores();
@@ -92,11 +92,8 @@ export default async function seedDemoData({ container }: ExecArgs) {
       store_id: store.id,
       supported_currencies: [
         {
-          currency_code: "eur",
+          currency_code: "brl",
           is_default: true,
-        },
-        {
-          currency_code: "usd",
         },
       ],
     },
@@ -115,8 +112,8 @@ export default async function seedDemoData({ container }: ExecArgs) {
     input: {
       regions: [
         {
-          name: "Europe",
-          currency_code: "eur",
+          name: "Brasil",
+          currency_code: "brl",
           countries,
           payment_providers: ["pp_system_default"],
         },
@@ -128,10 +125,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
 
   logger.info("Seeding tax regions...");
   await createTaxRegionsWorkflow(container).run({
-    input: countries.map((country_code) => ({
-      country_code,
-      provider_id: "tp_system",
-    })),
+    input: [
+      {
+        country_code: "br",
+        provider_id: "tp_system",
+      },
+    ],
   });
   logger.info("Finished seeding tax regions.");
 
@@ -142,10 +141,10 @@ export default async function seedDemoData({ container }: ExecArgs) {
     input: {
       locations: [
         {
-          name: "European Warehouse",
+          name: "Armazém Brasil",
           address: {
-            city: "Copenhagen",
-            country_code: "DK",
+            city: "São Paulo",
+            country_code: "BR",
             address_1: "",
           },
         },
@@ -172,6 +171,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
 
+
   logger.info("Seeding fulfillment data...");
   const shippingProfiles = await fulfillmentModuleService.listShippingProfiles({
     type: "default",
@@ -194,38 +194,14 @@ export default async function seedDemoData({ container }: ExecArgs) {
   }
 
   const fulfillmentSet = await fulfillmentModuleService.createFulfillmentSets({
-    name: "European Warehouse delivery",
+    name: "Entrega Brasil",
     type: "shipping",
     service_zones: [
       {
-        name: "Europe",
+        name: "Brasil",
         geo_zones: [
           {
-            country_code: "gb",
-            type: "country",
-          },
-          {
-            country_code: "de",
-            type: "country",
-          },
-          {
-            country_code: "dk",
-            type: "country",
-          },
-          {
-            country_code: "se",
-            type: "country",
-          },
-          {
-            country_code: "fr",
-            type: "country",
-          },
-          {
-            country_code: "es",
-            type: "country",
-          },
-          {
-            country_code: "it",
+            country_code: "br",
             type: "country",
           },
         ],
@@ -245,28 +221,24 @@ export default async function seedDemoData({ container }: ExecArgs) {
   await createShippingOptionsWorkflow(container).run({
     input: [
       {
-        name: "Standard Shipping",
+        name: "Frete Padrão",
         price_type: "flat",
         provider_id: "manual_manual",
         service_zone_id: fulfillmentSet.service_zones[0].id,
         shipping_profile_id: shippingProfile.id,
         type: {
-          label: "Standard",
-          description: "Ship in 2-3 days.",
+          label: "Padrão",
+          description: "Entrega em 5-8 dias úteis.",
           code: "standard",
         },
         prices: [
           {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
+            currency_code: "brl",
+            amount: 1990,
           },
           {
             region_id: region.id,
-            amount: 10,
+            amount: 1990,
           },
         ],
         rules: [
@@ -283,28 +255,24 @@ export default async function seedDemoData({ container }: ExecArgs) {
         ],
       },
       {
-        name: "Express Shipping",
+        name: "Frete Expresso",
         price_type: "flat",
         provider_id: "manual_manual",
         service_zone_id: fulfillmentSet.service_zones[0].id,
         shipping_profile_id: shippingProfile.id,
         type: {
-          label: "Express",
-          description: "Ship in 24 hours.",
+          label: "Expresso",
+          description: "Entrega em 1-2 dias úteis.",
           code: "express",
         },
         prices: [
           {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
+            currency_code: "brl",
+            amount: 3990,
           },
           {
             region_id: region.id,
-            amount: 10,
+            amount: 3990,
           },
         ],
         rules: [
@@ -378,15 +346,15 @@ export default async function seedDemoData({ container }: ExecArgs) {
     input: {
       product_categories: [
         {
-          name: "Shirts",
+          name: "Camisetas",
           is_active: true,
         },
         {
-          name: "Sweatshirts",
+          name: "Moletons",
           is_active: true,
         },
         {
-          name: "Pants",
+          name: "Calças",
           is_active: true,
         },
         {
@@ -401,12 +369,12 @@ export default async function seedDemoData({ container }: ExecArgs) {
     input: {
       products: [
         {
-          title: "Medusa T-Shirt",
+          title: "Camiseta Doze Crew",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Shirts")!.id,
+            categoryResult.find((cat) => cat.name === "Camisetas")!.id,
           ],
           description:
-            "Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.",
+            "Camiseta de algodão premium com acabamento de alta qualidade. Confortável para o dia a dia, com design minimalista e atemporal.",
           handle: "t-shirt",
           weight: 400,
           status: ProductStatus.PUBLISHED,
@@ -427,156 +395,124 @@ export default async function seedDemoData({ container }: ExecArgs) {
           ],
           options: [
             {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
+              title: "Tamanho",
+              values: ["P", "M", "G", "GG"],
             },
             {
-              title: "Color",
-              values: ["Black", "White"],
+              title: "Cor",
+              values: ["Preto", "Branco"],
             },
           ],
           variants: [
             {
-              title: "S / Black",
-              sku: "SHIRT-S-BLACK",
+              title: "P / Preto",
+              sku: "SHIRT-P-PRETO",
               options: {
-                Size: "S",
-                Color: "Black",
+                Tamanho: "P",
+                Cor: "Preto",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 8990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "S / White",
-              sku: "SHIRT-S-WHITE",
+              title: "P / Branco",
+              sku: "SHIRT-P-BRANCO",
               options: {
-                Size: "S",
-                Color: "White",
+                Tamanho: "P",
+                Cor: "Branco",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 8990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "M / Black",
-              sku: "SHIRT-M-BLACK",
+              title: "M / Preto",
+              sku: "SHIRT-M-PRETO",
               options: {
-                Size: "M",
-                Color: "Black",
+                Tamanho: "M",
+                Cor: "Preto",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 8990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "M / White",
-              sku: "SHIRT-M-WHITE",
+              title: "M / Branco",
+              sku: "SHIRT-M-BRANCO",
               options: {
-                Size: "M",
-                Color: "White",
+                Tamanho: "M",
+                Cor: "Branco",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 8990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "L / Black",
-              sku: "SHIRT-L-BLACK",
+              title: "G / Preto",
+              sku: "SHIRT-G-PRETO",
               options: {
-                Size: "L",
-                Color: "Black",
+                Tamanho: "G",
+                Cor: "Preto",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 8990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "L / White",
-              sku: "SHIRT-L-WHITE",
+              title: "G / Branco",
+              sku: "SHIRT-G-BRANCO",
               options: {
-                Size: "L",
-                Color: "White",
+                Tamanho: "G",
+                Cor: "Branco",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 8990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "XL / Black",
-              sku: "SHIRT-XL-BLACK",
+              title: "GG / Preto",
+              sku: "SHIRT-GG-PRETO",
               options: {
-                Size: "XL",
-                Color: "Black",
+                Tamanho: "GG",
+                Cor: "Preto",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 8990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "XL / White",
-              sku: "SHIRT-XL-WHITE",
+              title: "GG / Branco",
+              sku: "SHIRT-GG-BRANCO",
               options: {
-                Size: "XL",
-                Color: "White",
+                Tamanho: "GG",
+                Cor: "Branco",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 8990,
+                  currency_code: "brl",
                 },
               ],
             },
@@ -588,14 +524,14 @@ export default async function seedDemoData({ container }: ExecArgs) {
           ],
         },
         {
-          title: "Medusa Sweatshirt",
+          title: "Moletom Doze Crew",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Sweatshirts")!.id,
+            categoryResult.find((cat) => cat.name === "Moletons")!.id,
           ],
           description:
-            "Reimagine the feeling of a classic sweatshirt. With our cotton sweatshirt, everyday essentials no longer have to be ordinary.",
+            "Moletom de algodão premium com interior felpado. Perfeito para dias mais frios, com corte relaxado e acabamento de alta qualidade.",
           handle: "sweatshirt",
-          weight: 400,
+          weight: 600,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
           images: [
@@ -608,25 +544,21 @@ export default async function seedDemoData({ container }: ExecArgs) {
           ],
           options: [
             {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
+              title: "Tamanho",
+              values: ["P", "M", "G", "GG"],
             },
           ],
           variants: [
             {
-              title: "S",
-              sku: "SWEATSHIRT-S",
+              title: "P",
+              sku: "SWEATSHIRT-P",
               options: {
-                Size: "S",
+                Tamanho: "P",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 14990,
+                  currency_code: "brl",
                 },
               ],
             },
@@ -634,50 +566,38 @@ export default async function seedDemoData({ container }: ExecArgs) {
               title: "M",
               sku: "SWEATSHIRT-M",
               options: {
-                Size: "M",
+                Tamanho: "M",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 14990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "L",
-              sku: "SWEATSHIRT-L",
+              title: "G",
+              sku: "SWEATSHIRT-G",
               options: {
-                Size: "L",
+                Tamanho: "G",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 14990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "XL",
-              sku: "SWEATSHIRT-XL",
+              title: "GG",
+              sku: "SWEATSHIRT-GG",
               options: {
-                Size: "XL",
+                Tamanho: "GG",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 14990,
+                  currency_code: "brl",
                 },
               ],
             },
@@ -689,14 +609,14 @@ export default async function seedDemoData({ container }: ExecArgs) {
           ],
         },
         {
-          title: "Medusa Sweatpants",
+          title: "Calça Doze Crew",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Pants")!.id,
+            categoryResult.find((cat) => cat.name === "Calças")!.id,
           ],
           description:
-            "Reimagine the feeling of classic sweatpants. With our cotton sweatpants, everyday essentials no longer have to be ordinary.",
+            "Calça de moletom com elástico na cintura e punhos. Tecido macio e confortável, ideal para o dia a dia casual.",
           handle: "sweatpants",
-          weight: 400,
+          weight: 500,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
           images: [
@@ -709,25 +629,21 @@ export default async function seedDemoData({ container }: ExecArgs) {
           ],
           options: [
             {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
+              title: "Tamanho",
+              values: ["P", "M", "G", "GG"],
             },
           ],
           variants: [
             {
-              title: "S",
-              sku: "SWEATPANTS-S",
+              title: "P",
+              sku: "SWEATPANTS-P",
               options: {
-                Size: "S",
+                Tamanho: "P",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 12990,
+                  currency_code: "brl",
                 },
               ],
             },
@@ -735,50 +651,38 @@ export default async function seedDemoData({ container }: ExecArgs) {
               title: "M",
               sku: "SWEATPANTS-M",
               options: {
-                Size: "M",
+                Tamanho: "M",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 12990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "L",
-              sku: "SWEATPANTS-L",
+              title: "G",
+              sku: "SWEATPANTS-G",
               options: {
-                Size: "L",
+                Tamanho: "G",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 12990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "XL",
-              sku: "SWEATPANTS-XL",
+              title: "GG",
+              sku: "SWEATPANTS-GG",
               options: {
-                Size: "XL",
+                Tamanho: "GG",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 12990,
+                  currency_code: "brl",
                 },
               ],
             },
@@ -790,14 +694,14 @@ export default async function seedDemoData({ container }: ExecArgs) {
           ],
         },
         {
-          title: "Medusa Shorts",
+          title: "Shorts Doze Crew",
           category_ids: [
             categoryResult.find((cat) => cat.name === "Merch")!.id,
           ],
           description:
-            "Reimagine the feeling of classic shorts. With our cotton shorts, everyday essentials no longer have to be ordinary.",
+            "Shorts de algodão com elástico e cadarço na cintura. Leve e confortável para o verão ou academia.",
           handle: "shorts",
-          weight: 400,
+          weight: 300,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
           images: [
@@ -810,25 +714,21 @@ export default async function seedDemoData({ container }: ExecArgs) {
           ],
           options: [
             {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
+              title: "Tamanho",
+              values: ["P", "M", "G", "GG"],
             },
           ],
           variants: [
             {
-              title: "S",
-              sku: "SHORTS-S",
+              title: "P",
+              sku: "SHORTS-P",
               options: {
-                Size: "S",
+                Tamanho: "P",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 9990,
+                  currency_code: "brl",
                 },
               ],
             },
@@ -836,50 +736,38 @@ export default async function seedDemoData({ container }: ExecArgs) {
               title: "M",
               sku: "SHORTS-M",
               options: {
-                Size: "M",
+                Tamanho: "M",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 9990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "L",
-              sku: "SHORTS-L",
+              title: "G",
+              sku: "SHORTS-G",
               options: {
-                Size: "L",
+                Tamanho: "G",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 9990,
+                  currency_code: "brl",
                 },
               ],
             },
             {
-              title: "XL",
-              sku: "SHORTS-XL",
+              title: "GG",
+              sku: "SHORTS-GG",
               options: {
-                Size: "XL",
+                Tamanho: "GG",
               },
               prices: [
                 {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
+                  amount: 9990,
+                  currency_code: "brl",
                 },
               ],
             },
