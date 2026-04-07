@@ -8,7 +8,7 @@ const STORE_URL = process.env.STORE_URL || "http://localhost:3000"
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
-    redisUrl: process.env.REDIS_URL,
+    redisUrl: process.env.REDIS_URL || undefined, // Remove when Redis is not available
     http: {
       storeCors: process.env.STORE_CORS || STORE_URL,
       adminCors: process.env.ADMIN_CORS || `${BACKEND_URL},${STORE_URL}`,

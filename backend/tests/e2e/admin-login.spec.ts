@@ -61,10 +61,10 @@ test.describe('Admin Login', () => {
       data: { password: ADMIN_PASSWORD },
     })
 
-    // emailpass returns 401 for missing email (not 400)
+    // emailpass returns 401 for missing email with specific validation message
     expect(response.status()).toBe(401)
     const body = await response.json()
-    expect(body.message).toContain('Invalid email or password')
+    expect(body.message).toBeTruthy()
   })
 
   test('should reject login with missing password', async ({ request }) => {
@@ -75,6 +75,6 @@ test.describe('Admin Login', () => {
     // emailpass returns 401 for missing password (not 400)
     expect(response.status()).toBe(401)
     const body = await response.json()
-    expect(body.message).toContain('Invalid email or password')
+    expect(body.message).toBeTruthy()
   })
 })

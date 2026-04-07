@@ -51,11 +51,7 @@ spec:
                 secretKeyRef:
                   name: ecommerce-secrets
                   key: COOKIE_SECRET
-            - name: REDIS_URL
-              valueFrom:
-                secretKeyRef:
-                  name: ecommerce-secrets
-                  key: REDIS_URL
+            # Redis not deployed - removed to prevent connection timeout errors
             - name: STORE_CORS
               value: "https://shop.dozecrew.com,http://localhost:3000"
             - name: ADMIN_CORS
