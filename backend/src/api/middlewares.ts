@@ -15,12 +15,12 @@ export default defineMiddlewares({
   routes: [
     {
       method: ["POST"],
-      matcher: "/admin/auth/emailpass",
+      matcher: "/auth/admin/emailpass",
       middlewares: [normalizeEmail],
     },
     {
       method: ["POST"],
-      matcher: "/store/auth/emailpass",
+      matcher: "/auth/store/emailpass",
       middlewares: [normalizeEmail],
     },
   ],
