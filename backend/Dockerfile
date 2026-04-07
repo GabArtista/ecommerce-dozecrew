@@ -29,6 +29,10 @@ COPY --from=builder /app/.medusa/server ./server
 # Copy node_modules so medusa can find its dependencies
 COPY --from=builder /app/node_modules ./server/node_modules
 
+# Patch: normalize emails to lowercase in auth-emailpass provider (case-insensitive login fix)
+RUN sed -i 's/entity_id: email,$/entity_id: typeof email === "string" ? email.toLowerCase() : email,/' ./server/node_modules/@medusajs/auth-emailpass/dist/services/emailpass.js
+RUN sed -i 's/entity_id: email,$/entity_id: typeof email === "string" ? email.toLowerCase() : email,/' ./server/node_modules/@medusajs/auth-emailpass/dist/services/emailpass.js
+
 WORKDIR /app/server
 EXPOSE 9000
 CMD ["npm", "run", "start"]
