@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@medusajs/test-utils": "2.13.1",
+    "@playwright/test": "^1.59.1",
     "@swc/core": "^1.7.28",
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.13",
