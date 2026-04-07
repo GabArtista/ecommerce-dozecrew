@@ -25,7 +25,7 @@ spec:
               done
       containers:
         - name: medusa-backend
-          image: ecommerce/medusa-backend:latest
+          image: ecommerce/medusa-backend:v1.1
           imagePullPolicy: Never
           ports:
             - containerPort: 9000
