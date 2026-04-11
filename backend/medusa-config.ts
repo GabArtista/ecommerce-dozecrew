@@ -26,12 +26,18 @@ module.exports = defineConfig({
             resolve: "@medusajs/file-s3",
             id: "s3",
             options: {
-              file_url: process.env.S3_URL || "https://s3.minio.dozecrew.com/ecommerce-uploads",
+              // file_url: URL pública base usada para gerar o endereço das imagens armazenadas.
+              //   Dev  → http://localhost:9002/ecommerce-uploads  (MinIO via docker-compose)
+              //   Prod → https://s3.minio.dozecrew.com/ecommerce-uploads (MinIO via K8s Ingress)
+              file_url: process.env.S3_URL || "http://localhost:9002/ecommerce-uploads",
               bucket: process.env.S3_BUCKET || "ecommerce-uploads",
               region: process.env.S3_REGION || "us-east-1",
-              endpoint: process.env.S3_ENDPOINT || "http://minio.storage:9000",
-              access_key_id: process.env.S3_ACCESS_KEY_ID || "",
-              secret_access_key: process.env.S3_SECRET_ACCESS_KEY || "",
+              // endpoint: URL interna usada pelo SDK S3 para operações de upload/download.
+              //   Dev  → http://localhost:9002  (porta do MinIO no docker-compose)
+              //   Prod → http://minio.storage:9000 (serviço K8s interno — definido via env var)
+              endpoint: process.env.S3_ENDPOINT || "http://localhost:9002",
+              access_key_id: process.env.S3_ACCESS_KEY_ID || "admin",
+              secret_access_key: process.env.S3_SECRET_ACCESS_KEY || "password",
               additional_client_config: {
                 forcePathStyle: true,
               },
