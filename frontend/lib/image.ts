@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-const LOCAL_IMAGE_HOSTS = new Set(["127.0.0.1", "localhost"]);
+const LOCAL_IMAGE_HOSTS = new Set(["127.0.0.1", "localhost", "minio.storage"]);
 
 export function shouldBypassImageOptimization(
   src: string | undefined | null,

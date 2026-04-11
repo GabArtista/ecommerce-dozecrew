@@ -168,5 +168,14 @@ O frontend é baseado no **Next.js Commerce** (Vercel open-source).
 
 ---
 
-**Última atualização**: 2026-03-30
-**Versão**: 1.0
+---
+
+## Documentação
+
+- [Setup local de desenvolvimento](docs/SETUP.md)
+- [Deploy e operação em produção](docs/PRODUCTION.md)
+
+---
+
+**Última atualização**: 2026-04-11
+**Versão**: 2.0

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: shop-frontend
-          image: ecommerce/shop-frontend:latest
+          image: ecommerce/shop-frontend:v2.0
           imagePullPolicy: Never
           ports:
             - containerPort: 3000

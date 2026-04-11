@@ -19,6 +19,28 @@ module.exports = defineConfig({
   },
   modules: [
     {
+      resolve: "@medusajs/medusa/file",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/file-s3",
+            id: "s3",
+            options: {
+              file_url: process.env.S3_URL || "https://s3.minio.dozecrew.com/ecommerce-uploads",
+              bucket: process.env.S3_BUCKET || "ecommerce-uploads",
+              region: process.env.S3_REGION || "us-east-1",
+              endpoint: process.env.S3_ENDPOINT || "http://minio.storage:9000",
+              access_key_id: process.env.S3_ACCESS_KEY_ID || "",
+              secret_access_key: process.env.S3_SECRET_ACCESS_KEY || "",
+              additional_client_config: {
+                forcePathStyle: true,
+              },
+            },
+          },
+        ],
+      },
+    },
+    {
       resolve: "@medusajs/medusa/payment",
       options: {
         providers: [

@@ -30,22 +30,22 @@ test.describe('Storefront', () => {
     await expect(
       page.locator('button:has-text("Add To Cart"), button:has-text("Out Of Stock")').first(),
     ).toBeVisible()
-    const productImage = page.locator(
-      'main img[src*="/_next/image"], main img[src*="localhost:9000/static/"]',
-    ).first()
+    // Aceita imagens de qualquer host (localhost dev, MinIO/S3 prod)
+    const productImage = page.locator('main img').first()
     await expect(productImage).toBeVisible()
     await expect
-      .poll(() => productImage.evaluate((img) => img.naturalWidth))
+      .poll(() => productImage.evaluate((img) => (img as HTMLImageElement).naturalWidth), { timeout: 10000 })
       .toBeGreaterThan(0)
   })
 
   test('camiseta renderiza imagem principal carregada', async ({ page }) => {
     await page.goto('/product/t-shirt?cor=Preto&tamanho=P')
     await expect(page.locator('h1')).toBeVisible()
-    const tShirtImage = page.locator('img[src*="localhost:9000/static/"]').first()
-    await expect(tShirtImage).toBeVisible()
+    // Aceita imagens de qualquer host configurado (localhost dev, MinIO prod)
+    const productImage = page.locator('main img').first()
+    await expect(productImage).toBeVisible()
     await expect
-      .poll(() => tShirtImage.evaluate((img) => img.naturalWidth))
+      .poll(() => productImage.evaluate((img) => (img as HTMLImageElement).naturalWidth), { timeout: 10000 })
       .toBeGreaterThan(0)
   })
 

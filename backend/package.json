@@ -25,6 +25,7 @@
     "@heroicons/react": "^2.2.0",
     "@medusajs/admin-sdk": "2.13.1",
     "@medusajs/cli": "2.13.1",
+    "@medusajs/file-s3": "2.13.1",
     "@medusajs/framework": "2.13.1",
     "@medusajs/medusa": "2.13.1",
     "asaas": "^1.1.0",

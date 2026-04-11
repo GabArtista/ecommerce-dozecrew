@@ -10,7 +10,9 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk";
 import {
+  batchLinkProductsToCollectionWorkflow,
   createApiKeysWorkflow,
+  createCollectionsWorkflow,
   createInventoryLevelsWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
@@ -782,6 +784,72 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
   logger.info("Finished seeding product data.");
+
+  // Buscar produtos criados para linkar às coleções
+  const { data: allProducts } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+  });
+
+  const findProduct = (handle: string) =>
+    allProducts.find((p) => p.handle === handle);
+
+  logger.info("Seeding homepage collections...");
+
+  // Coleção featured: t-shirt, sweatshirt, shorts (mínimo 3 para ThreeItemGrid)
+  const featuredHandles = ["t-shirt", "sweatshirt", "shorts"];
+  const featuredProductIds = featuredHandles
+    .map((h) => findProduct(h)?.id)
+    .filter(Boolean) as string[];
+
+  // Coleção carousel: todos os produtos
+  const allProductIds = allProducts.map((p) => p.id);
+
+  const { result: collectionsResult } = await createCollectionsWorkflow(
+    container
+  ).run({
+    input: {
+      collections: [
+        {
+          title: "Homepage Featured",
+          handle: "hidden-homepage-featured-items",
+        },
+        {
+          title: "Homepage Carousel",
+          handle: "hidden-homepage-carousel",
+        },
+      ],
+    },
+  });
+
+  const featuredCollection = collectionsResult.find(
+    (c) => c.handle === "hidden-homepage-featured-items"
+  );
+  const carouselCollection = collectionsResult.find(
+    (c) => c.handle === "hidden-homepage-carousel"
+  );
+
+  if (featuredCollection && featuredProductIds.length >= 3) {
+    await batchLinkProductsToCollectionWorkflow(container).run({
+      input: {
+        id: featuredCollection.id,
+        add: featuredProductIds,
+        remove: [],
+      },
+    });
+  }
+
+  if (carouselCollection && allProductIds.length > 0) {
+    await batchLinkProductsToCollectionWorkflow(container).run({
+      input: {
+        id: carouselCollection.id,
+        add: allProductIds,
+        remove: [],
+      },
+    });
+  }
+
+  logger.info("Finished seeding homepage collections.");
 
   logger.info("Seeding inventory levels.");
 

@@ -25,7 +25,7 @@ spec:
               done
       containers:
         - name: medusa-backend
-          image: ecommerce/medusa-backend:v1.1
+          image: ecommerce/medusa-backend:v2.0
           imagePullPolicy: Never
           ports:
             - containerPort: 9000
@@ -89,6 +89,24 @@ spec:
                   key: ML_CLIENT_SECRET
             - name: ML_REDIRECT_URI
               value: "https://shop-back.dozecrew.com/store/marketplace/oauth/callback/mercadolivre"
+            - name: BACKEND_URL
+              value: "https://shop-back.dozecrew.com"
+            # MinIO / S3 file storage
+            - name: S3_URL
+              value: "https://s3.minio.dozecrew.com/ecommerce-uploads"
+            - name: S3_BUCKET
+              value: "ecommerce-uploads"
+            - name: S3_REGION
+              value: "us-east-1"
+            - name: S3_ENDPOINT
+              value: "http://minio.storage:9000"
+            - name: S3_ACCESS_KEY_ID
+              value: "admin"
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: MINIO_SECRET_KEY
           readinessProbe:
             httpGet:
               path: /health
