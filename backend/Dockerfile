@@ -15,9 +15,18 @@ ENV STORE_CORS=http://localhost:3000
 ENV ADMIN_CORS=http://localhost:9000
 ENV AUTH_CORS=http://localhost:3000
 ENV ASAAS_API_KEY=dummy_for_build
+# S3/MinIO: valores dummy para satisfazer o build (não fazem conexão real)
+ENV S3_URL=http://localhost:9002/ecommerce-uploads
+ENV S3_BUCKET=ecommerce-uploads
+ENV S3_REGION=us-east-1
+ENV S3_ENDPOINT=http://localhost:9002
+ENV S3_ACCESS_KEY_ID=dummy_for_build
+ENV S3_SECRET_ACCESS_KEY=dummy_for_build
 
-RUN npm run build || true
-# Ensure correct medusa-config.js (overrides compiled version which may miss modules)
+RUN npm run build
+# Sobrescreve o medusa-config.js compilado com a versão prod.js pré-compilada
+# Garante que os módulos S3 e Asaas estejam sempre incluídos mesmo que o build
+# gere uma versão incompleta do config por tree-shaking ou quirks do compilador.
 RUN cp medusa-config.prod.js .medusa/server/medusa-config.js
 
 # Production runner: start from the compiled .medusa/server directory

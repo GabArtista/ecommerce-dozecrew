@@ -1,90 +1,89 @@
-import { test, expect } from '@playwright/test'
+/**
+ * Testes E2E: Checkout
+ *
+ * Cobre:
+ * - Acesso direto à página de checkout
+ * - Redirect sem carrinho
+ * - Formulário de endereço com seções corretas (headings reais do componente)
+ * - Auto-fill de CEP via ViaCEP
+ * - Seções de frete e pagamento
+ *
+ * Headings reais do componente:
+ *   h1: "Finalizar Pedido"
+ *   h2: "1. Identificação", "2. Endereço de entrega", "3. Frete", "4. Pagamento"
+ */
+import { test, expect, type Page } from "@playwright/test";
 
-test.describe('Checkout', () => {
-  test('botao proceed to checkout redireciona para /checkout', async ({ page }) => {
-    await page.goto('/')
-    await page.goto('/checkout')
-    await expect(page).toHaveURL('/checkout')
-    await expect(page.url()).not.toContain('localhost:9000')
-  })
+async function addTshirtToCart(page: Page) {
+  await page.goto("/product/t-shirt");
+  await expect(page.locator("h1")).toBeVisible();
+  const addBtn = page.locator('button:has-text("Add To Cart")').first();
+  await expect(addBtn).toBeVisible({ timeout: 10000 });
+  await addBtn.click();
+  // Aguarda badge atualizar — sem waitForTimeout arbitrário
+  await expect(page.locator('button[aria-label="Open cart"]')).toContainText("1", { timeout: 10000 });
+}
 
-  test('checkout sem cart redireciona para home', async ({ page }) => {
-    await page.context().clearCookies()
-    await page.goto('/checkout')
-    await expect(page).toHaveURL(/\/$|\/checkout/)
-  })
+test.describe("Checkout — sem carrinho", () => {
+  test("redireciona para home quando não há carrinho", async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto("/checkout");
+    await expect(page).toHaveURL(/\/$|\/checkout/, { timeout: 10000 });
+  });
 
-  test('formulario de endereco com auto-fill CEP', async ({ page }) => {
-    await page.goto('/checkout')
-    const body = await page.textContent('body')
-    expect(body).toBeTruthy()
-  })
+  test("não expõe URL do backend no DOM", async ({ page }) => {
+    await page.goto("/checkout");
+    const count = await page.locator("a[href*='localhost:9000']").count();
+    expect(count).toBe(0);
+  });
 
-  test('pagina de confirmacao acessivel', async ({ page }) => {
-    await page.goto('/checkout/confirmacao/test-order-id')
-    await expect(page).toHaveURL(/confirmacao/)
-  })
+  test("página de confirmação é acessível por URL direta", async ({ page }) => {
+    await page.goto("/checkout/confirmacao/ORDER-TEST-123?payment=pix");
+    await expect(page).toHaveURL(/confirmacao\/ORDER-TEST-123/);
+    await expect(page.locator("body")).toBeVisible();
+  });
+});
 
-  test('checkout page does not expose backend URL in DOM', async ({ page }) => {
-    await page.goto('/checkout')
-    const backendUrlInLinks = await page.locator('a[href*="localhost:9000"]').count()
-    expect(backendUrlInLinks).toBe(0)
-  })
+test.describe("Checkout — com carrinho", () => {
+  test.skip(({ browserName }) => browserName !== "chromium", "apenas chromium");
 
-  test('redirect para confirmacao apos ordem bem-sucedida', async ({ page }) => {
-    // Verifica estrutura da URL de confirmacao
-    await page.goto('/checkout/confirmacao/ORDER-123?payment=pix')
-    await expect(page).toHaveURL(/confirmacao\/ORDER-123/)
-  })
-})
+  test("h1 'Finalizar Pedido' visível", async ({ page }) => {
+    await addTshirtToCart(page);
+    await page.goto("/checkout");
+    await expect(page.getByRole("heading", { name: /Finalizar Pedido/i })).toBeVisible();
+  });
 
-test.describe('Checkout com carrinho', () => {
-  test.skip(({ browserName }) => browserName !== 'chromium', 'only run on chromium')
+  test("seções do formulário visíveis (Identificação, Endereço, Frete, Pagamento)", async ({ page }) => {
+    await addTshirtToCart(page);
+    await page.goto("/checkout");
+    await expect(page.locator("h2").filter({ hasText: "Identificação" }).first()).toBeVisible();
+    await expect(page.locator("h2").filter({ hasText: "Endereço" }).first()).toBeVisible();
+    await expect(page.locator("h2").filter({ hasText: "Frete" }).first()).toBeVisible();
+    await expect(page.locator("h2").filter({ hasText: "Pagamento" }).first()).toBeVisible();
+  });
 
-  test('campos obrigatorios do formulario de endereco sao visiveis', async ({ page }) => {
-    await page.goto('/product/t-shirt?cor=Preto&tamanho=P')
-    await expect(page.locator('button:has-text("Add To Cart")')).toBeVisible()
-    await page.locator('button:has-text("Add To Cart")').click()
-    await page.waitForTimeout(500)
+  test("CEP auto-fill preenche cidade via ViaCEP", async ({ page }) => {
+    await addTshirtToCart(page);
+    await page.goto("/checkout");
 
-    await page.goto('/checkout')
-    await expect(page).toHaveURL(/\/checkout/)
-    await expect(page.locator('h2').filter({ hasText: 'Identificação' }).first()).toBeVisible()
-    await expect(page.locator('h2').filter({ hasText: 'Endereço' }).first()).toBeVisible()
-  })
-
-  test('CEP auto-fill preenche endereco', async ({ page }) => {
-    await page.goto('/product/t-shirt?cor=Preto&tamanho=P')
-    await page.locator('button:has-text("Add To Cart")').click()
-    await page.waitForTimeout(500)
-
-    await page.goto('/checkout')
-    await expect(page).toHaveURL(/\/checkout/)
-
-    const cepInput = page.locator('#cep, input[name="cep"]').first()
-    const visible = await cepInput.isVisible().catch(() => false)
-
-    if (visible) {
-      await cepInput.fill('01310-100') // Avenida Paulista - CEP válido
-      await page.waitForTimeout(2000) // aguarda API ViaCEP
-
-      const cityInput = page.locator('#city, input[name="city"]').first()
-      const cityFilled = await cityInput.inputValue().catch(() => '')
-      if (cityFilled) {
-        expect(cityFilled.toLowerCase()).toContain('paulo')
-      }
+    const cepInput = page.locator("#cep, input[name='cep']").first();
+    if (!(await cepInput.isVisible().catch(() => false))) {
+      test.skip();
+      return;
     }
-  })
 
-  test('secoes de frete e pagamento estao disponiveis', async ({ page }) => {
-    await page.goto('/product/t-shirt?cor=Preto&tamanho=P')
-    await page.locator('button:has-text("Add To Cart")').click()
-    await page.waitForTimeout(500)
+    // Escuta resposta do ViaCEP para evitar timeout arbitrário
+    const viacepResponse = page.waitForResponse(
+      (res) => res.url().includes("viacep.com.br"),
+      { timeout: 10000 },
+    ).catch(() => null);
 
-    await page.goto('/checkout')
-    await expect(page).toHaveURL(/\/checkout/)
+    await cepInput.fill("01310-100");
+    await viacepResponse;
 
-    await expect(page.locator('h2').filter({ hasText: 'Frete' }).first()).toBeVisible()
-    await expect(page.locator('h2').filter({ hasText: 'Pagamento' }).first()).toBeVisible()
-  })
-})
+    const cityInput = page.locator("#city, input[name='city']").first();
+    await expect(cityInput).not.toHaveValue("", { timeout: 8000 });
+    const city = await cityInput.inputValue();
+    expect(city.toLowerCase()).toContain("paulo");
+  });
+});

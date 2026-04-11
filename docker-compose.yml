@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: senha_local
+      POSTGRES_DB: medusa_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa -d medusa_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+    ports:
+      - "9002:9000"   # S3 API  → S3_ENDPOINT=http://localhost:9002
+      - "9001:9001"   # Console → http://localhost:9001
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # Cria o bucket ecommerce-uploads com acesso público de download
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 admin password;
+        mc mb --ignore-existing local/ecommerce-uploads;
+        mc anonymous set download local/ecommerce-uploads;
+        echo 'MinIO: bucket ecommerce-uploads pronto (acesso publico de leitura)';
+      "
+    restart: on-failure
+
+volumes:
+  postgres_data:
+  minio_data:

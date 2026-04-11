@@ -25,6 +25,7 @@ Plataforma de e-commerce headless completa com:
 /
 ├── INDEX.md                    ← Você está aqui
 ├── AGENTS.md                   ← Contrato operacional para agentes
+├── docker-compose.yml          ← Dev local: PostgreSQL + MinIO (um só comando)
 ├── backend/                    # Medusa Commerce v2
 │   ├── src/
 │   │   ├── admin/             # Widgets customizados do Admin
@@ -33,7 +34,8 @@ Plataforma de e-commerce headless completa com:
 │   │   ├── subscribers/       # Event listeners
 │   │   ├── jobs/              # Jobs agendados
 │   │   └── workflows/         # Workflows Medusa
-│   └── medusa-config.ts       # Config central
+│   ├── medusa-config.ts       # Config central (TypeScript — fonte de verdade)
+│   └── medusa-config.prod.js  # Config pré-compilada (copiada sobre o build no Dockerfile)
 ├── frontend/                   # Next.js App Router
 │   ├── app/                   # Rotas (páginas)
 │   ├── components/            # Componentes React
@@ -43,6 +45,13 @@ Plataforma de e-commerce headless completa com:
 │   ├── lib/medusa/            # SDK/integração Medusa
 │   └── tests/e2e/             # Playwright E2E
 ├── k8s/                        # Kubernetes manifests
+│   ├── minio.yaml             # MinIO — namespace storage (S3-compatible)
+│   ├── medusa-backend.yaml    # Backend Medusa
+│   ├── frontend.yaml          # Frontend Next.js
+│   ├── postgres.yaml          # PostgreSQL
+│   ├── ingress.yaml           # NGINX ingress
+│   ├── secrets.yaml           # Secrets base64 (nunca commitar com valores reais)
+│   └── deploy.sh              # Script de deploy completo
 └── docs/                       # Documentação do projeto
     ├── squad/                  # Specs dos agentes
     ├── ux/                     # Pesquisa e specs de UX
@@ -56,15 +65,23 @@ Plataforma de e-commerce headless completa com:
 
 | Camada | Completude | Status |
 |--------|-----------|--------|
-| Infra K8s/Docker/SSL | ~90% | Quase pronta |
+| Infra K8s/Docker/SSL | ~95% | MinIO manifest adicionado, docker-compose criado |
 | Backend Medusa core | ~70% | Funcional com gaps |
 | Pagamento Asaas backend | ~60% | Backend ok |
 | Frontend vitrine | ~75% | Navegável |
-| **Frontend Checkout** | **0%** | **Bloqueador P0** |
+| **Frontend Checkout** | **~50%** | **Form existe, bugs P0/P1 pendentes** |
 | **Autenticação cliente** | **0%** | **Bloqueador P1** |
 | Marketplace Hub | 0% | A implementar |
 | Emails transacionais | 0% | A implementar |
 | Admin widgets custom | ~5% | Esqueleto |
+
+### Mudanças recentes (v2.1)
+
+- `k8s/minio.yaml` criado — MinIO deploy completo em namespace `storage` com PVC, Service e Ingress
+- `docker-compose.yml` criado — sobe PostgreSQL + MinIO com bucket auto-configurado em 1 comando
+- `backend/Dockerfile` corrigido — removido `|| true` do build, adicionadas vars S3 dummy para build
+- `frontend/next.config.ts` corrigido — adicionado `localhost:9002` (MinIO dev) em `remotePatterns`
+- `k8s/deploy.sh` atualizado — agora deploya MinIO antes do backend e falha explicitamente se MinIO não subir
 
 ---
 
@@ -178,4 +195,4 @@ O frontend é baseado no **Next.js Commerce** (Vercel open-source).
 ---
 
 **Última atualização**: 2026-04-11
-**Versão**: 2.0
+**Versão**: 2.1

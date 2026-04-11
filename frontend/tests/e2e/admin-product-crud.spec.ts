@@ -116,8 +116,7 @@ test.describe('Admin: CRUD de produto com imagem', () => {
       )
     }
 
-    // 3. Aguardar produto aparecer na loja (cache pode demorar)
-    await page.waitForTimeout(2000)
+    // 3. Navegar para o produto (cache pode ainda não ter propagado — o teste aceita ausência)
     await page.goto(`/product/${TEST_PRODUCT_HANDLE}`)
 
     // O produto pode não aparecer imediatamente por cache

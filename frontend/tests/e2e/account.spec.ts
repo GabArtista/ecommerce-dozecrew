@@ -1,151 +1,166 @@
-import { test, expect } from '@playwright/test'
+/**
+ * Testes E2E: Área do cliente
+ *
+ * Estrutura real das páginas (não skeleton):
+ *   /account/login   → h1 "Entrar", input email/password, links "Esqueci minha senha" e "Criar conta"
+ *   /account/register → h1 "Criar conta", input firstName/email/password
+ *   /account          → redirect para /account/login se sem token; h2 "Pedidos recentes" se autenticado
+ *
+ * Testes de fluxo autenticado (registro + login + logout) são best-effort:
+ * pulam se o backend não estiver disponível.
+ */
+import { test, expect } from "@playwright/test";
 
-// Credenciais criadas pelo seed (admin@medusa-test.com / supersecret para admin,
-// cliente de teste criado em seed se houver — caso não haja, testes de login válido
-// são marcados como best-effort e não quebram o suite)
-const TEST_EMAIL = process.env.TEST_CUSTOMER_EMAIL || 'cliente@teste.com'
-const TEST_PASSWORD = process.env.TEST_CUSTOMER_PASSWORD || 'senha12345'
+const TEST_EMAIL = process.env.TEST_CUSTOMER_EMAIL || "cliente@teste.com";
+const TEST_PASSWORD = process.env.TEST_CUSTOMER_PASSWORD || "senha12345";
 
-test.describe('Account', () => {
-  test('pagina de login acessivel', async ({ page }) => {
-    await page.goto('/account/login')
-    await expect(page).toHaveURL('/account/login')
-    await expect(page.locator('input[type="email"]')).toBeVisible()
-    await expect(page.locator('input[type="password"]')).toBeVisible()
-  })
+test.describe("Account — páginas públicas", () => {
+  test("página de login é acessível", async ({ page }) => {
+    await page.goto("/account/login");
+    await expect(page).toHaveURL("/account/login");
+    await expect(page.locator("input[type='email']")).toBeVisible();
+    await expect(page.locator("input[type='password']")).toBeVisible();
+  });
 
-  test('pagina de cadastro acessivel', async ({ page }) => {
-    await page.goto('/account/register')
-    await expect(page).toHaveURL('/account/register')
-    await expect(page.locator('input[type="email"]')).toBeVisible()
-  })
+  test("página de login tem h1 'Entrar'", async ({ page }) => {
+    await page.goto("/account/login");
+    await expect(page.getByRole("heading", { name: /Entrar/i })).toBeVisible();
+  });
 
-  test('login invalido mostra erro', async ({ page }) => {
-    await page.goto('/account/login')
-    await page.fill('input[type="email"]', 'invalido@test.com')
-    await page.fill('input[type="password"]', 'senhaerrada123')
-    await page.click('button[type="submit"]')
-    await expect(page.locator('[role="alert"], .text-red-600, [class*="error"]')).toBeVisible({ timeout: 5000 })
-  })
+  test("página de login tem link 'Esqueci minha senha'", async ({ page }) => {
+    await page.goto("/account/login");
+    await expect(page.getByText(/Esqueci minha senha/i)).toBeVisible();
+  });
 
-  test('area do cliente sem login redireciona para login', async ({ page }) => {
-    await page.context().clearCookies()
-    await page.goto('/account')
-    await expect(page).toHaveURL(/login|account/)
-  })
+  test("página de login tem link 'Criar conta'", async ({ page }) => {
+    await page.goto("/account/login");
+    await expect(page.getByText(/Criar conta/i)).toBeVisible();
+  });
 
-  test('submit com campos vazios no login mostra erro', async ({ page }) => {
-    await page.goto('/account/login')
-    await page.click('button[type="submit"]')
-    const alertVisible = await page.locator('[role="alert"]').isVisible().catch(() => false)
-    const nativeValid = await page.locator('input[type="email"]:invalid').count()
-    expect(alertVisible || nativeValid > 0).toBeTruthy()
-  })
+  test("submit vazio mostra erro ou validação nativa", async ({ page }) => {
+    await page.goto("/account/login");
+    await page.click("button[type='submit']");
+    const alertVisible = await page.locator("[role='alert']").isVisible().catch(() => false);
+    const emailInvalid = await page.locator("input[type='email']:invalid").count();
+    expect(alertVisible || emailInvalid > 0).toBeTruthy();
+  });
 
-  test('link esqueci minha senha existe na pagina de login', async ({ page }) => {
-    await page.goto('/account/login')
-    await expect(page.getByText(/esqueci.*senha/i)).toBeVisible()
-  })
+  test("login inválido mostra erro", async ({ page }) => {
+    await page.goto("/account/login");
+    await page.fill("input[type='email']", "invalido@test.com");
+    await page.fill("input[type='password']", "senhaerrada123");
+    await page.click("button[type='submit']");
+    await expect(page.locator("[role='alert']")).toBeVisible({ timeout: 8000 });
+  });
 
-  test('link criar conta existe na pagina de login', async ({ page }) => {
-    await page.goto('/account/login')
-    await expect(page.getByText(/criar conta/i)).toBeVisible()
-  })
+  test("página de cadastro é acessível", async ({ page }) => {
+    await page.goto("/account/register");
+    await expect(page).toHaveURL("/account/register");
+    await expect(page.locator("input[type='email']")).toBeVisible();
+  });
 
-  test('cadastro com senha muito curta desabilita botao', async ({ page }) => {
-    await page.goto('/account/register')
-    const emailInput = page.locator('input[type="email"]').first()
-    const passwordInput = page.locator('input[type="password"]').first()
+  test("página de cadastro tem h1 'Criar conta'", async ({ page }) => {
+    await page.goto("/account/register");
+    await expect(page.getByRole("heading", { name: /Criar conta/i }).first()).toBeVisible();
+  });
 
-    await emailInput.fill('novo@usuario.com')
-    await passwordInput.fill('123') // menos de 8 chars
+  test("cadastro com senha curta bloqueia submissão", async ({ page }) => {
+    await page.goto("/account/register");
+    const emailInput = page.locator("input[type='email']").first();
+    const passwordInput = page.locator("input[type='password']").first();
 
-    // O botão de submit deve estar desabilitado ou o campo inválido
-    const submitBtn = page.locator('button[type="submit"]')
-    const isDisabled = await submitBtn.isDisabled().catch(() => false)
-    const isInvalid = await passwordInput.evaluate((el: HTMLInputElement) => !el.validity.valid).catch(() => false)
-    expect(isDisabled || isInvalid).toBeTruthy()
-  })
+    await emailInput.fill("novo@usuario.com");
+    await passwordInput.fill("123"); // menos de 8 chars
 
-  test('login valido redireciona para /account', async ({ page }) => {
-    // Primeiro cria uma conta para garantir que existe
-    await page.goto('/account/register')
-    const uniqueEmail = `test_${Date.now()}@e2e.com`
+    const submitBtn = page.locator("button[type='submit']");
+    const isDisabled = await submitBtn.isDisabled().catch(() => false);
+    const isInvalid = await passwordInput
+      .evaluate((el: HTMLInputElement) => !el.validity.valid)
+      .catch(() => false);
+    expect(isDisabled || isInvalid).toBeTruthy();
+  });
+});
 
-    await page.locator('input[name="firstName"], input[placeholder*="nome"], input[id*="first"]').first().fill('E2E')
-    await page.locator('input[type="email"]').first().fill(uniqueEmail)
-    await page.locator('input[type="password"]').first().fill('Senha12345!')
+test.describe("Account — proteção de rota", () => {
+  test("área do cliente sem login redireciona para /account/login", async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto("/account");
+    // Deve redirecionar para /account/login
+    await expect(page).toHaveURL(/\/account\/login/, { timeout: 10000 });
+  });
+});
 
-    await page.click('button[type="submit"]')
+test.describe("Account — fluxo autenticado (best-effort)", () => {
+  // Esses testes requerem backend ativo e são pulados se não houver resposta
 
-    // Aguarda redirecionamento para /account
-    await page.waitForURL(/\/account(?!\/login|\/register)/, { timeout: 10000 }).catch(() => {})
+  test("registro → login → redirect para /account", async ({ page }) => {
+    const uniqueEmail = `test_${Date.now()}@e2e.com`;
+    await page.goto("/account/register");
 
-    const currentUrl = page.url()
-    // Deve ir para /account ou permanecer com sucesso
-    const isSuccess = currentUrl.includes('/account') && !currentUrl.includes('/login')
-    if (!isSuccess) {
-      // Se registro falhou (email já existe ou backend offline), login com credenciais ENV
-      await page.goto('/account/login')
-      await page.fill('input[type="email"]', TEST_EMAIL)
-      await page.fill('input[type="password"]', TEST_PASSWORD)
-      await page.click('button[type="submit"]')
-      await page.waitForURL(/\/account(?!\/login)/, { timeout: 10000 }).catch(() => {})
-    }
-  })
+    await page.locator("input[name='firstName'], input[id='firstName']").first().fill("E2E");
+    await page.locator("input[type='email']").first().fill(uniqueEmail);
+    await page.locator("input[type='password']").first().fill("Senha12345!");
 
-  test('logout redireciona para login', async ({ page }) => {
-    // Registra/loga
-    await page.goto('/account/register')
-    const uniqueEmail = `logout_${Date.now()}@e2e.com`
-    await page.locator('input[name="firstName"], input[placeholder*="nome"], input[id*="first"]').first().fill('Test')
-    await page.locator('input[type="email"]').first().fill(uniqueEmail)
-    await page.locator('input[type="password"]').first().fill('Senha12345!')
-    await page.click('button[type="submit"]')
-    await page.waitForURL(/\/account(?!\/login|\/register)/, { timeout: 10000 }).catch(() => {})
+    await page.click("button[type='submit']");
 
-    const afterRegister = page.url()
-    if (!afterRegister.includes('/account') || afterRegister.includes('/login')) {
-      test.skip() // backend não disponível — pula
-      return
-    }
+    await page.waitForURL(/\/account(?!\/login|\/register)/, { timeout: 10000 }).catch(() => {});
 
-    // Localiza botão de logout
-    const logoutBtn = page.locator('button:has-text(/sair|logout/i), a:has-text(/sair|logout/i)').first()
-    const hasLogout = await logoutBtn.isVisible().catch(() => false)
-
-    if (hasLogout) {
-      await logoutBtn.click()
-      await page.waitForURL(/\/account\/login/, { timeout: 5000 }).catch(() => {})
-      await expect(page).toHaveURL(/login/)
-    }
-  })
-
-  test('pagina de conta exibe lista de pedidos', async ({ page }) => {
-    // Registra
-    await page.goto('/account/register')
-    const uniqueEmail = `orders_${Date.now()}@e2e.com`
-    await page.locator('input[name="firstName"]').fill('Test')
-    await page.locator('input[type="email"]').first().fill(uniqueEmail)
-    await page.locator('input[name="password"]').fill('Senha12345!')
-    await page.click('button[type="submit"]')
-
-    // Aguarda redirect para /account (não login nem register)
-    await page.waitForURL(/\/account\/?$/, { timeout: 10000 }).catch(() => {})
-
-    // Aguarda estabilização da navegação (server-side redirect pode acontecer depois)
-    await page.waitForTimeout(1000)
-    await page.waitForLoadState('networkidle').catch(() => {})
-
-    const url = page.url()
-    // Verifica se chegou no dashboard (URL termina em /account)
-    if (!url.match(/\/account\/?$/) || url.includes('/login') || url.includes('/register')) {
-      return // backend offline ou registro falhou — não quebra o suite
+    const url = page.url();
+    if (!url.includes("/account") || url.includes("/login") || url.includes("/register")) {
+      // Backend offline ou validação falhou — pula sem quebrar suite
+      console.log("Registro não redirecionou para /account — backend pode estar offline");
+      return;
     }
 
-    // Deve mostrar a seção de pedidos (mesmo que vazia)
+    // Chegou no dashboard — verificar conteúdo
+    await expect(page.locator("h1")).toBeVisible();
+  });
+
+  test("logout redireciona para /account/login", async ({ page }) => {
+    // Registra primeiro
+    const uniqueEmail = `logout_${Date.now()}@e2e.com`;
+    await page.goto("/account/register");
+    await page.locator("input[name='firstName'], input[id='firstName']").first().fill("Test");
+    await page.locator("input[type='email']").first().fill(uniqueEmail);
+    await page.locator("input[type='password']").first().fill("Senha12345!");
+    await page.click("button[type='submit']");
+    await page.waitForURL(/\/account(?!\/login|\/register)/, { timeout: 10000 }).catch(() => {});
+
+    if (!page.url().match(/\/account\/?$/) || page.url().includes("/login")) {
+      test.skip();
+      return;
+    }
+
+    const logoutBtn = page
+      .locator("button:has-text(/sair|logout/i), a:has-text(/sair|logout/i)")
+      .first();
+    const hasLogout = await logoutBtn.isVisible().catch(() => false);
+    if (!hasLogout) return; // logout ainda não implementado
+
+    await logoutBtn.click();
+    await expect(page).toHaveURL(/\/account\/login/, { timeout: 8000 });
+  });
+
+  test("dashboard exibe seção de pedidos", async ({ page }) => {
+    const uniqueEmail = `orders_${Date.now()}@e2e.com`;
+    await page.goto("/account/register");
+    await page.locator("input[name='firstName'], input[id='firstName']").first().fill("Test");
+    await page.locator("input[type='email']").first().fill(uniqueEmail);
+    await page.locator("input[name='password'], input[type='password']").first().fill("Senha12345!");
+    await page.click("button[type='submit']");
+
+    await page.waitForURL(/\/account\/?$/, { timeout: 10000 }).catch(() => {});
+    // Aguarda carga server-side sem waitForTimeout fixo
+    await page.waitForLoadState("networkidle").catch(() => {});
+
+    const url = page.url();
+    if (!url.match(/\/account\/?$/) || url.includes("/login") || url.includes("/register")) {
+      return; // backend offline
+    }
+
+    // h2 real do dashboard: "Pedidos recentes"
     await expect(
-      page.locator('h2').filter({ hasText: 'Pedidos' }).first()
-    ).toBeVisible({ timeout: 8000 })
-  })
-})
+      page.locator("h2").filter({ hasText: /Pedidos/ }).first(),
+    ).toBeVisible({ timeout: 8000 });
+  });
+});

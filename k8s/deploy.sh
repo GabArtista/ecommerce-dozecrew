@@ -40,6 +40,12 @@ kubectl apply -f "$K8S_DIR/namespace.yaml"
 kubectl apply -f "$K8S_DIR/secrets.yaml"
 
 echo ""
+echo "=== [1.5/8] Deploy MinIO (namespace: storage) ==="
+kubectl apply -f "$K8S_DIR/minio.yaml"
+echo "Aguardando MinIO ficar pronto..."
+kubectl wait --for=condition=ready pod -l app=minio -n storage --timeout=120s || true
+
+echo ""
 echo "=== [2/8] Garantindo bucket MinIO ==="
 MINIO_POD=$(kubectl get pod -n storage -l app=minio -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || echo "")
 if [ -n "$MINIO_POD" ]; then
@@ -48,7 +54,8 @@ if [ -n "$MINIO_POD" ]; then
   kubectl exec -n storage "$MINIO_POD" -- mc anonymous set download local/ecommerce-uploads 2>/dev/null || true
   echo "Bucket ecommerce-uploads: OK"
 else
-  echo "AVISO: MinIO pod não encontrado, certifique-se que o bucket existe"
+  echo "ERRO: MinIO pod não encontrado após deploy. Verifique: kubectl get pods -n storage"
+  exit 1
 fi
 
 if [ "$FRONTEND_ONLY" = false ]; then

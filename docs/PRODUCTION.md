@@ -25,12 +25,14 @@ Internet
 
 ### Componentes
 
-| Serviço | Namespace | Imagem | Porta |
-|---------|-----------|--------|-------|
-| shop-frontend | ecommerce | ecommerce/shop-frontend:v2.0 | 3000 |
-| medusa-backend | ecommerce | ecommerce/medusa-backend:v2.0 | 9000 |
-| postgres | ecommerce | postgres:15 | 5432 |
-| minio | storage | minio/minio | 9000 |
+| Serviço | Namespace | Imagem | Porta | Manifest |
+|---------|-----------|--------|-------|----------|
+| shop-frontend | ecommerce | ecommerce/shop-frontend:v2.1 | 3000 | `k8s/frontend.yaml` |
+| medusa-backend | ecommerce | ecommerce/medusa-backend:v2.1 | 9000 | `k8s/medusa-backend.yaml` |
+| postgres | ecommerce | postgres:15 | 5432 | `k8s/postgres.yaml` |
+| minio | storage | minio/minio:latest | 9000/9001 | `k8s/minio.yaml` |
+
+> **MinIO** fica no namespace `storage` separado para isolamento. O backend acessa via `http://minio.storage:9000` (DNS interno do K8s). O público acessa imagens via `https://s3.minio.dozecrew.com`.
 
 ---
 

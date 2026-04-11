@@ -35,6 +35,13 @@ export default {
         port: "9000",
         pathname: "/**",
       },
+      // MinIO dev local (docker-compose: S3_ENDPOINT=http://localhost:9002)
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "9002",
+        pathname: "/**",
+      },
       // MinIO S3 — produção (público)
       {
         protocol: "https",

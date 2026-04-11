@@ -16,36 +16,28 @@ Guia para rodar o e-commerce Dozecrew localmente, sem Kubernetes.
 
 ## 1. Subir dependências de infraestrutura
 
-```bash
-# PostgreSQL
-docker run -d \
-  --name medusa-postgres \
-  -e POSTGRES_USER=medusa \
-  -e POSTGRES_PASSWORD=senha_local \
-  -e POSTGRES_DB=medusa_dev \
-  -p 5432:5432 \
-  postgres:15
+Use o docker-compose na raiz do projeto — sobe PostgreSQL + MinIO e cria o bucket automaticamente:
 
-# MinIO (storage de arquivos)
-docker run -d \
-  --name medusa-minio \
-  -e MINIO_ROOT_USER=admin \
-  -e MINIO_ROOT_PASSWORD=password \
-  -p 9002:9000 \
-  -p 9001:9001 \
-  minio/minio server /data --console-address ":9001"
+```bash
+# Na raiz do projeto (onde está docker-compose.yml)
+docker compose up -d
+
+# Acompanhar logs (opcional)
+docker compose logs -f minio-init
 ```
 
-### Criar bucket no MinIO
+Serviços após o `up`:
+| Serviço | URL | Credenciais |
+|---------|-----|-------------|
+| PostgreSQL | `localhost:5432` | medusa / senha_local |
+| MinIO S3 API | `http://localhost:9002` | admin / password |
+| MinIO Console | `http://localhost:9001` | admin / password |
 
+> O serviço `minio-init` cria o bucket `ecommerce-uploads` com acesso público de leitura automaticamente.
+
+Para parar e limpar volumes:
 ```bash
-# Instalar mc (MinIO Client) se necessário:
-# brew install minio/stable/mc  (macOS)
-# ou: docker exec medusa-minio mc ...
-
-docker exec medusa-minio mc alias set local http://localhost:9000 admin password
-docker exec medusa-minio mc mb local/ecommerce-uploads
-docker exec medusa-minio mc anonymous set download local/ecommerce-uploads
+docker compose down -v
 ```
 
 ---

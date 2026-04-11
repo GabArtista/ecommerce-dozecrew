@@ -127,7 +127,8 @@ test.describe('Imagens de Produto', () => {
 
     if (inStock) {
       await addButton.click()
-      await page.waitForTimeout(800)
+      // Aguarda badge confirmar item adicionado em vez de timeout fixo
+      await expect(page.locator('button[aria-label="Open cart"]')).toContainText('1', { timeout: 8000 })
 
       // Abrir carrinho
       await page.locator('button[aria-label="Open cart"]').click()
