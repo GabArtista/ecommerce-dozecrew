@@ -48,15 +48,25 @@ kubectl wait --for=condition=ready pod -l app=minio -n storage --timeout=120s ||
 echo ""
 echo "=== [2/8] Garantindo bucket MinIO ==="
 MINIO_POD=$(kubectl get pod -n storage -l app=minio -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || echo "")
-if [ -n "$MINIO_POD" ]; then
-  kubectl exec -n storage "$MINIO_POD" -- mc alias set local http://localhost:9000 admin SUPER_MINIO_PASSWORD_123 2>/dev/null || true
-  kubectl exec -n storage "$MINIO_POD" -- mc mb --ignore-existing local/ecommerce-uploads 2>/dev/null || true
-  kubectl exec -n storage "$MINIO_POD" -- mc anonymous set download local/ecommerce-uploads 2>/dev/null || true
-  echo "Bucket ecommerce-uploads: OK"
-else
+if [ -z "$MINIO_POD" ]; then
   echo "ERRO: MinIO pod não encontrado após deploy. Verifique: kubectl get pods -n storage"
   exit 1
 fi
+# Lê a senha do MinIO a partir do secret (não fica hardcoded no script)
+MINIO_PASS=$(kubectl get secret -n ecommerce ecommerce-secrets -o jsonpath='{.data.MINIO_SECRET_KEY}' 2>/dev/null | base64 -d || echo "SUPER_MINIO_PASSWORD_123")
+# Cria o bucket via pod temporário com minio/mc (mc não está no minio/minio image)
+kubectl run -n storage minio-bucket-init \
+  --image=minio/mc:latest \
+  --restart=Never \
+  --rm \
+  -i \
+  --env="MINIO_PASS=${MINIO_PASS}" \
+  --command -- /bin/sh -c "
+    until mc alias set myminio http://minio.storage:9000 admin \"\$MINIO_PASS\" 2>/dev/null; do sleep 3; done;
+    mc mb --ignore-existing myminio/ecommerce-uploads;
+    mc anonymous set download myminio/ecommerce-uploads;
+    echo 'Bucket ecommerce-uploads: OK'
+  " 2>/dev/null || echo "Aviso: criação do bucket via kubectl run falhou — init container do backend irá criar o bucket na inicialização"
 
 if [ "$FRONTEND_ONLY" = false ]; then
   if [ "$SKIP_BUILD" = false ]; then

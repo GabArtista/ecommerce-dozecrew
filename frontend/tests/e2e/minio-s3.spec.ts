@@ -103,11 +103,18 @@ test.describe("S3 / MinIO — Upload via Backend", () => {
       })
       .catch(() => null);
 
+    // Falha de conexão (MinIO/backend inacessível) → pular graciosamente
     if (!res) { test.skip(); return; }
 
+    // Erro do servidor (ex: NoSuchBucket, S3 mal configurado) → FALHAR, não pular
     if (!res.ok()) {
       const body = await res.text().catch(() => "");
-      console.warn(`Upload falhou (${res.status()}): ${body.substring(0, 200)}`);
+      const detail = `Upload falhou (HTTP ${res.status()}): ${body.substring(0, 300)}`;
+      console.error(detail);
+      // 4xx = erro de cliente (config, auth) → pular; 5xx = erro do servidor → falhar
+      if (res.status() >= 500) {
+        throw new Error(detail);
+      }
       test.skip();
       return;
     }

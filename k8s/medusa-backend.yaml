@@ -23,6 +23,25 @@ spec:
               until nc -z postgres 5432; do
                 echo "waiting for postgres..."; sleep 3;
               done
+        # Cria o bucket MinIO antes de iniciar o backend (idempotente)
+        - name: init-minio-bucket
+          image: minio/mc:latest
+          env:
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: MINIO_SECRET_KEY
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until mc alias set myminio http://minio.storage:9000 admin "$S3_SECRET_ACCESS_KEY" 2>/dev/null; do
+                echo "waiting for MinIO..."; sleep 5;
+              done
+              mc mb --ignore-existing myminio/ecommerce-uploads
+              mc anonymous set download myminio/ecommerce-uploads
+              echo "MinIO bucket ready"
       containers:
         - name: medusa-backend
           image: ecommerce/medusa-backend:v2.0
